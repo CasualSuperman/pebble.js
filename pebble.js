@@ -1,3 +1,4 @@
+// vim:noexpandtab: set ts=3 sw=3:
 // Anonymous Function
 (function(window, undefined) {
 	// The various relationships a compound in a selector can have with others.
