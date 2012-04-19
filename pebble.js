@@ -51,16 +51,25 @@ function lexFromEnd(selector, last) {
 		switch (character) {
 		case '#':
 		case '.':
-			escaped = isEscaped(selector, last);
-			if (!escaped) {
+		case ':':
+			if (inQuotedSection) {
 				last--;
-				lexing = false;
+			} else {
+				escaped = isEscaped(selector, last);
+				if (!escaped) {
+					last--;
+					lexing = false;
+				}
+				last -= escaped;
 			}
-			last -= escaped;
 			break;
 
 		case '!':
 		case ',':
+		case ')':
+		case '(':
+		case '[':
+		case ']':
 			if (inQuotedSection) {
 				last--;
 			} else {
