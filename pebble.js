@@ -1,23 +1,6 @@
 // Anonymous Function
 (function(window, undefined) {
 
-// The various relationships a compound in a selector can have with others.
-var relationships = {
-	descendant: 0,
-	child: 1,
-	younger_sibling: 2,
-	next_eldest_sibling: 3
-};
-
-// A constructor function for a default compound.
-var Compound = function() {
-	this.tag = "";
-	this.classes = [];
-	this.id = "";
-	this.subject = false;
-	this.attributes = [];
-};
-
 var _pebble = window["pebble"];
 
 /* Checks to see if the charater at the given index is escaped.
@@ -28,7 +11,7 @@ var isEscaped = function(selector, index) {
 	// Last possible index for an escape.
 	var lastSlash = index - 1;
 	// Loop backwards through the slashes.
-	while (selector.charAt(lastSlash) === '\\') {
+	while (lastSlash >= 0 && selector.charAt(lastSlash) === '\\') {
 		lastSlash--;
 	}
 	// Check the number of escaped escape characters.
@@ -43,9 +26,10 @@ var isEscaped = function(selector, index) {
 
 // Find the next section of a compound from the end of a given point.
 var lexFromEnd = function(selector, last) {
-	var inEscapedSection = false;
+	var start = last;
+	var inQuotedSection = false;
 	var lexing = true;
-	while (lexing) {
+	while (lexing && last >= 0) {
 		var char = selector.charAt(last);
 
 		switch (char) {
@@ -56,14 +40,14 @@ var lexFromEnd = function(selector, last) {
 		case '>':
 		case '+':
 		case ',':
-			if (inEscapedSection) {
+			if (inQuotedSection) {
 				last--;
 			} else {
-				var escaped = isEscaped(selector, last));
-				if (!escaped && char === ' ') {
-					// A space will not be included in the token if it's not escaped.
-					last++;
+				var escaped = isEscaped(selector, last);
+				if (!escaped && (start === last || char !== ' ')) {
+						last--;
 				}
+				lexing = !(!escaped);
 				last -= escaped;
 			}
 			break;
@@ -74,7 +58,7 @@ var lexFromEnd = function(selector, last) {
 		}
 	}
 
-	return last + 1;
+	return last;
 };
 
 var pebble = function(selector, context) {
@@ -88,10 +72,10 @@ var pebble = function(selector, context) {
 
 	var last = selector.length - 1;
 
-	while (last > 0) {
-		var first = lexFromEnd(selector, last),
-			token = selector.slice(first, last + 1);
-		console.log(token);
+	while (last >= 0) {
+		var first = lexFromEnd(selector, last);
+		var token = selector.slice(first + 1, last + 1);
+		console.log((first + 1) + " to " + (last + 1) + ":", token);
 		last = first;
 	}
 };
