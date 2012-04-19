@@ -1,13 +1,12 @@
 // Anonymous Function
-(function(window, undefined) {
-
-var _pebble = window["pebble"];
+(function() {
+"use strict";
 
 /* Checks to see if the charater at the given index is escaped.
  * Returns 0 if it is not escaped, or the number of slashes escaping the value
  * if it is escaped.
  */
-var isEscaped = function(selector, index) {
+function isEscaped(selector, index) {
 	// Last possible index for an escape.
 	var lastSlash = index - 1;
 	// Loop backwards through the slashes.
@@ -25,17 +24,24 @@ var isEscaped = function(selector, index) {
 }
 
 // Find the next section of a compound from the end of a given point.
-var lexFromEnd = function(selector, last) {
-	var start = last;
-	var inQuotedSection = false;
-	var lexing = true;
+function lexFromEnd(selector, last) {
+	var start = last,
+		inQuotedSection = false,
+		lexing = true;
 	while (lexing && last >= 0) {
-		var char = selector.charAt(last);
+		var character = selector.charAt(last);
 
-		switch (char) {
-		case ' ':
-		case '.':
+		switch (character) {
 		case '#':
+		case '.':
+			var escaped = isEscaped(selector, last);
+			if (!escaped) {
+				last--;
+				lexing = false;
+			}
+			last -= escaped;
+			break;
+		case ' ':
 		case '~':
 		case '>':
 		case '+':
@@ -44,7 +50,7 @@ var lexFromEnd = function(selector, last) {
 				last--;
 			} else {
 				var escaped = isEscaped(selector, last);
-				if (!escaped && (start === last || char !== ' ')) {
+				if (!escaped && start === last) {
 						last--;
 				}
 				lexing = !(!escaped);
@@ -59,9 +65,10 @@ var lexFromEnd = function(selector, last) {
 	}
 
 	return last;
-};
+}
 
-var pebble = function(selector, context) {
+var _pebble = window["pebble"],
+	pebble = function(selector, context) {
 	if (selector === undefined || selector === "") {
 		return [];
 	}
@@ -73,19 +80,19 @@ var pebble = function(selector, context) {
 	var last = selector.length - 1;
 
 	while (last >= 0) {
-		var first = lexFromEnd(selector, last);
-		var token = selector.slice(first + 1, last + 1);
+		var first = lexFromEnd(selector, last),
+			token = selector.slice(first + 1, last + 1);
 		console.log((first + 1) + " to " + (last + 1) + ":", token);
 		last = first;
 	}
 };
 
-this.restore = function() {
+pebble.restore = function() {
 	window["pebble"] = _pebble;
 	return pebble;
 };
 
 window["pebble"] = pebble;
 
-})(this);
-// vim:noexpandtab: set ts=3 sw=3:
+}());
+// vim:noexpandtab: set ts=4 sw=4:
