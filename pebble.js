@@ -125,7 +125,7 @@ var _pebble = window["pebble"],
 			console.log('"' + token + '"');
 		} else {
 			console.log("Breaking out because of an empty match.");
-			first = len;
+			last = len;
 		}
 		first = last;
 	}
