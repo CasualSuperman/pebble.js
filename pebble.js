@@ -29,19 +29,20 @@ function lexFromEnd(selector, last) {
 		inQuotedSection = false,
 		lexing = true;
 	while (lexing && last >= 0) {
-		var character = selector.charAt(last);
+		var character = selector.charAt(last),
+			escaped;
 
 		switch (character) {
 		case '#':
 		case '.':
-			var escaped = isEscaped(selector, last);
+			escaped = isEscaped(selector, last);
 			if (!escaped) {
 				last--;
 				lexing = false;
 			}
 			last -= escaped;
 			break;
-		case ' ':
+
 		case '~':
 		case '>':
 		case '+':
@@ -49,7 +50,7 @@ function lexFromEnd(selector, last) {
 			if (inQuotedSection) {
 				last--;
 			} else {
-				var escaped = isEscaped(selector, last);
+				escaped = isEscaped(selector, last);
 				if (!escaped && start === last) {
 						last--;
 				}
@@ -57,6 +58,22 @@ function lexFromEnd(selector, last) {
 				last -= escaped;
 			}
 			break;
+
+		case ' ':
+			if (inQuotedSection) {
+				last--;
+			} else {
+				escaped = isEscaped(selector, last);
+				if (!escaped && start === last) {
+					lexing = false;
+					// We should scan for selectors to prevent
+					// [" ", "+", " "]-esque things as showing up as the next
+					// few symbols
+
+				} else {
+					last -= escaped;
+				}
+			}
 		// We haven't hit a new section yet.
 		default:
 			last--;
@@ -82,7 +99,9 @@ var _pebble = window["pebble"],
 	while (last >= 0) {
 		var first = lexFromEnd(selector, last),
 			token = selector.slice(first + 1, last + 1);
-		console.log((first + 1) + " to " + (last + 1) + ":", token);
+		if (token.length > 0) {
+			
+		}
 		last = first;
 	}
 };
