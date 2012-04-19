@@ -106,7 +106,6 @@ var _pebble = window["pebble"],
 		if (token.length > 0) {
 			console.log('"' + token + '"');
 		} else {
-			console.log("Breaking out because of an empty match.");
 			first = len;
 		}
 		first = last;
