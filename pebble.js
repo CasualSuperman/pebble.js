@@ -23,28 +23,45 @@ function lexAttribute(selector, start) {
 		selectorLength = selector.length,
 		lexing = true;
 	while (lexing && last < selector.length) {
-		var character = selector.charAt(start);
+		var character = selector.charAt(last);
+		switch (character) {
+			case '\\':
+				last += 2;
+				break;
+			case '"':
+			case "'":
+				var next = lexQuote(selector, last);
+				if (next == last) {
+					return start;
+				}
+				last = next;
+			case ']':
+				return last + 1;
+			default:
+				last++;
+				break;
+		}
 	}
+	return start;
 }
 
 function lexQuote(selector, start) {
 	var quoteCharacter = selector.charAt(start),
-		lexing = true,
 		last = start + 1,
 		selectorLength = selector.length;
-	while (lexing && last < selectorLength) {
-		switch (selector.charAt(start)) {
+	while (last < selectorLength) {
+		switch (selector.charAt(last)) {
 		case '\\':
 			last += 2;
 			break;
 		case quoteCharacter:
-			lexing = false;
+			return last + 1;
 		default:
 			last++;
 			break;
 		}
 	}
-	return last;
+	return start;
 }
 
 // Find the next section of a compound from the end of a given point.
@@ -66,12 +83,16 @@ function lex(selector, start) {
 				last = lexQuote(selector, last);
 			}
 			return last;
+		case '[':
+			if (start === last) {
+				last = lexAttribute(selector, last);
+			}
+			return last;
 		case '#':
 		case '.':
 		case ':':
 		case '!':
 		case ',':
-		case '[':
 			if (start === last) {
 				last++;
 			} else {
