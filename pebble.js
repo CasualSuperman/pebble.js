@@ -18,10 +18,6 @@ var indexOf = (function() {
 	};
 }());
 
-var has = function(arr, item) {
-	return arr.indexOf(item) !== -1;
-}
-
 function lexAttribute(selector, start) {
 	var last = start + 1,
 		selectorLength = selector.length,
@@ -51,10 +47,6 @@ function lexQuote(selector, start) {
 	return last;
 }
 
-var stoppingNonSelectors = ['#', '.', ':', '!', ',', '['],
-	stoppingSelectors = ['~', '>', '+', ' '],
-	initializers = stoppingNonSelectors.concat(stoppingSelectors);
-
 // Find the next section of a compound from the end of a given point.
 function lex(selector, start) {
 	var last = start,
@@ -64,27 +56,52 @@ function lex(selector, start) {
 	while (lexing && last < selectorLength) {
 		var character = selector.charAt(last);
 
-		if (has(['"', "'"], character)) {
+		switch (character) {
+		case '\\':
+			last += 2;
+			break;
+		case '"':
+		case "'":
 			if (start === last) {
 				last = lexQuote(selector, last);
 			}
 			return last;
-		} else if (has(initializers, character)) {
-			var isSelector = has(stoppingSelectors, character);
-			if (isSelector && start === last) {
-				for (var next = last + 1; /^\s*[+~ >]\s*$/.test(selector.slice(last, next)); next++) {}
-				last = next - 1;
+		case '#':
+		case '.':
+		case ':':
+		case '!':
+		case ',':
+		case '[':
+			if (start === last) {
+				last++;
+			} else {
+				lexing = false;
 			}
-			if (isSelector || start !== last) {
-				return last;
+			break;
+		case '~':
+		case '>':
+		case '+':
+		case ' ':
+			if (start === last) {
+				// We should scan for selectors to prevent
+				// [" ", "+", " "]-esque things as showing up as the next
+				// few symbols
+				lexing = false;
+				last++;
+				var next = lex(selector, last);
+				if (/^\s*[+~ >]\s*$/.test(selector.slice(last, next))) {
+					last = next;
+				}
 			}
+			lexing = false;
+			break;
+		// We haven't hit a new section yet.
+		default:
 			last++;
-		} else if (character === '\\') {
-			last += 2;
-		} else {
-			last++;
+			break;
 		}
 	}
+
 	return last;
 }
 
@@ -108,7 +125,7 @@ var _pebble = window["pebble"],
 			console.log('"' + token + '"');
 		} else {
 			console.log("Breaking out because of an empty match.");
-			last = len;
+			first = len;
 		}
 		first = last;
 	}
