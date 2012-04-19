@@ -19,7 +19,12 @@ var indexOf = (function() {
 }());
 
 function lexAttribute(selector, start) {
-	
+	var last = start + 1,
+		selectorLength = selector.length,
+		lexing = true;
+	while (lexing && last < selector.length) {
+		var character = selector.charAt(start);
+	}
 }
 
 function lexQuote(selector, start) {
@@ -28,16 +33,15 @@ function lexQuote(selector, start) {
 		last = start + 1,
 		selectorLength = selector.length;
 	while (lexing && last < selectorLength) {
-		switch (character) {
-		case quoteCharacter:
-			lexing = false;
-			last++;
-			break;
+		switch (selector.charAt(start)) {
 		case '\\':
 			last += 2;
 			break;
+		case quoteCharacter:
+			lexing = false;
 		default:
 			last++;
+			break;
 		}
 	}
 	return last;
