@@ -3,16 +3,18 @@
 "use strict";
 
 var indexOf = (function() {
-	var indexOf = Array.prototype.indexOf || function (item) {
-		for (var i = 0, len = this.length; i < len; ++i) {
-			if (item === this[i]) {
+	if (Array.prototype.indexOf) {
+		return function(arr, item) {
+			return arr.indexOf(item);
+		};
+	}
+	return function(arr, item) {
+		for (var i = 0, len = arr.length; i < len; ++i) {
+			if (item === arr[i]) {
 				return i;
 			}
 		}
 		return -1;
-	};
-	return function(arr, item) {
-		return indexOf.call(arr, item);
 	};
 }());
 
@@ -133,7 +135,7 @@ var _pebble = window["pebble"],
 	}
 };
 
-pebble.restore = function() {
+pebble["noConflict"] = function() {
 	window["pebble"] = _pebble;
 	return pebble;
 };
