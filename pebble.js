@@ -18,6 +18,31 @@ var indexOf = (function() {
 	};
 }());
 
+function lexAttribute(selector, start) {
+	
+}
+
+function lexQuote(selector, start) {
+	var quoteCharacter = selector.charAt(start),
+		lexing = true,
+		last = start + 1,
+		selectorLength = selector.length;
+	while (lexing && last < selectorLength) {
+		switch (character) {
+		case quoteCharacter:
+			lexing = false;
+			last++;
+			break;
+		case '\\':
+			last += 2;
+			break;
+		default:
+			last++;
+		}
+	}
+	return last;
+}
+
 // Find the next section of a compound from the end of a given point.
 function lex(selector, start) {
 	var last = start,
@@ -31,51 +56,40 @@ function lex(selector, start) {
 		case '\\':
 			last += 2;
 			break;
+		case '"':
+		case "'":
+			if (start === last) {
+				last = lexQuote(selector, last);
+			}
+			return last;
 		case '#':
 		case '.':
 		case ':':
-			if (inQuotedSection) {
-				last++;
-			} else 	if (last === start) {
-				last++;
-			} else {
-				lexing = false;
-			}
-			break;
-
 		case '!':
 		case ',':
 		case '[':
-			if (inQuotedSection) {
+			if (start === last) {
 				last++;
 			} else {
-				if (start === last) {
-						last++;
-				} else {
-					lexing = false;
-				}
+				lexing = false;
 			}
 			break;
 		case '~':
 		case '>':
 		case '+':
 		case ' ':
-			if (inQuotedSection) {
-				last++;
-			} else {
-				if (start === last) {
-					// We should scan for selectors to prevent
-					// [" ", "+", " "]-esque things as showing up as the next
-					// few symbols
-					lexing = false;
-					last++;
-					var next = lex(selector, last);
-					if (/^\s*[+~ >]\s*$/.test(selector.slice(last, next))) {
-						last = next;
-					}
-				}
+			if (start === last) {
+				// We should scan for selectors to prevent
+				// [" ", "+", " "]-esque things as showing up as the next
+				// few symbols
 				lexing = false;
+				last++;
+				var next = lex(selector, last);
+				if (/^\s*[+~ >]\s*$/.test(selector.slice(last, next))) {
+					last = next;
+				}
 			}
+			lexing = false;
 			break;
 		// We haven't hit a new section yet.
 		default:
