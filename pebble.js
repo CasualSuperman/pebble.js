@@ -16,106 +16,84 @@ var Compound = function() {
 	this.id = "";
 	this.subject = false;
 	this.attributes = [];
-	this.relationship = relationships.descendant;
 };
-
-var lex = function(string) {
-	// If we start with whitespace, return it.
-	var whitespace = string.match(/^\s+/);
-
-	if (whitespace) {
-		console.log("Whitespace found.");
-		return [whitespace[0], ' '];
-	}
-
-	var ident = string.charAt(0);
-
-	switch (ident) {
-	case '>': // Child selector
-	case '!': // Subject selector
-	case '*': // Any-tag selector
-	case '+': // Next-sibling selector
-	case '~': // Sibling selector
-	case ',': // List of selectors
-		return [ident, ident];
-
-	case '.': // Classes
-		return string.match(/^(\.)([-]?[_a-z][_a-z0-9-]*)/i);
-
-	case '#': // IDs
-		return string.match(/^(#)([-]?[_a-z][_a-z0-9-]*)/i);
-
-	case ':': // Pseudo-classes
-		break;
-
-	case '[': // Attribute selectors
-		return string.match(/^(\[)/i);
-
-	default: // Tag names
-		return string.match(/^([-]?[_a-z][_a-z0-9-]*)/i);
-	}
-};
-
-// Converts a selector string into a sequence of processed compounds.
-var processSelector = function(selector) {
-	// Start our list.
-	var chains = [new Compound(null)];
-	// Our current element.
-	var current = chains[0];
-
-	var token = "";
-
-	do {
-		token = lex(selector);
-		console.log(token);
-		if (token) {
-			selector = selector.slice(token.length);
-			if (token[1].length === 1) {
-				switch (token[1]) {
-					// Move on to next compound, this is the end of the selector.
-					case ' ':
-						current.next = new Compound(current);
-						current = current.next;
-						break;
-					case '#':
-						current.id = token[2];
-						break;
-					case '.':
-						current.classes.push(token[2]);
-						break;
-					case '*':
-						current.tag = "*";
-						break;
-					case '!':
-						current.subject = true;
-						break;
-					case '+':
-						current.prev.relationship = relationships.next_eldest_sibling;
-						break;
-					case '~':
-						current.prev.relationship = relationships.younger_sibling;
-						break;
-					case '>':
-						current.prev.relationship = relationships.child;
-						break;
-					case ',':
-						current = chains[chains.length] = new Compound(null);
-						break;
-				}
-			}
-		}
-	} while (token && selector.length);
-}
 
 var _pebble = window["pebble"];
 
-var pebble = function(selector, context) {
-	if (selector === undefined) {
-		return [];
-	} else {
-		selector = processSelector(selector);
+/* Checks to see if the charater at the given index is escaped.
+ * Returns 0 if it is not escaped, or the number of slashes escaping the value
+ * if it is escaped.
+ */
+var isEscaped = function(selector, index) {
+	// Last possible index for an escape.
+	var lastSlash = index - 1;
+	// Loop backwards through the slashes.
+	while (selector.charAt(lastSlash) === '\\') {
+		lastSlash--;
 	}
+	// Check the number of escaped escape characters.
+	if ((index - lastSlash) & 1) {
+		// If it's odd, we're not escaped, and we should break
+		return 0;
+	} else {
+		// If it's even, we're escaped, and we should keep going.
+		return (index - lastSlash);
+	}
+}
+
+// Find the next section of a compound from the end of a given point.
+var lexFromEnd = function(selector, last) {
+	var inEscapedSection = false;
+	var lexing = true;
+	while (lexing) {
+		var char = selector.charAt(last);
+
+		switch (char) {
+		case ' ':
+		case '.':
+		case '#':
+		case '~':
+		case '>':
+		case '+':
+		case ',':
+			if (inEscapedSection) {
+				last--;
+			} else {
+				var escaped = isEscaped(selector, last));
+				if (!escaped && char === ' ') {
+					// A space will not be included in the token if it's not escaped.
+					last++;
+				}
+				last -= escaped;
+			}
+			break;
+		// We haven't hit a new section yet.
+		default:
+			last--;
+			break;
+		}
+	}
+
+	return last + 1;
+};
+
+var pebble = function(selector, context) {
+	if (selector === undefined || selector === "") {
+		return [];
+	}
+	// Make sure we have a root element to work with.
 	context = context || document;
+	// Get those nasty spaces gone.
+	selector = selector.trim();
+
+	var last = selector.length - 1;
+
+	while (last > 0) {
+		var first = lexFromEnd(selector, last),
+			token = selector.slice(first, last + 1);
+		console.log(token);
+		last = first;
+	}
 };
 
 this.restore = function() {
@@ -126,4 +104,4 @@ this.restore = function() {
 window["pebble"] = pebble;
 
 })(this);
-// vim:noexpandtab: set ts=4 sw=4:
+// vim:noexpandtab: set ts=3 sw=3:
