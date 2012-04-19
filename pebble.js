@@ -2,6 +2,20 @@
 (function() {
 "use strict";
 
+var indexOf = (function() {
+	var indexOf = Array.prototype.indexOf || function (item) {
+		for (var i = 0, len = this.length; i < len; ++i) {
+			if (item === this[i]) {
+				return i;
+			}
+		}
+		return -1;
+	};
+	return function(arr, item) {
+		return indexOf.call(arr, item);
+	};
+}());
+
 /* Checks to see if the charater at the given index is escaped.
  * Returns 0 if it is not escaped, or the number of slashes escaping the value
  * if it is escaped.
@@ -43,9 +57,7 @@ function lexFromEnd(selector, last) {
 			last -= escaped;
 			break;
 
-		case '~':
-		case '>':
-		case '+':
+		case '!':
 		case ',':
 			if (inQuotedSection) {
 				last--;
@@ -59,6 +71,9 @@ function lexFromEnd(selector, last) {
 			}
 			break;
 
+		case '~':
+		case '>':
+		case '+':
 		case ' ':
 			if (inQuotedSection) {
 				last--;
@@ -66,14 +81,26 @@ function lexFromEnd(selector, last) {
 				escaped = isEscaped(selector, last);
 				if (!escaped && start === last) {
 					lexing = false;
+					last--;
 					// We should scan for selectors to prevent
 					// [" ", "+", " "]-esque things as showing up as the next
 					// few symbols
-
+					var seeking = true;
+					while (seeking && last > 0) {
+						var next = lexFromEnd(selector, last);
+						if (/^\s*[+~ >]\s*$/.test(selector.slice(next + 1, last + 1))) {
+							last--;
+						} else {
+							seeking = false;
+						}
+					}
+				} else if (!escaped) {
+					lexing = false;
 				} else {
 					last -= escaped;
 				}
 			}
+			break;
 		// We haven't hit a new section yet.
 		default:
 			last--;
@@ -100,7 +127,7 @@ var _pebble = window["pebble"],
 		var first = lexFromEnd(selector, last),
 			token = selector.slice(first + 1, last + 1);
 		if (token.length > 0) {
-			
+			console.log('"' + token.trim() + '"');
 		}
 		last = first;
 	}
