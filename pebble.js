@@ -22,33 +22,52 @@ var has = function(arr, item) {
 	return arr.indexOf(item) !== -1;
 }
 
+window['has'] = has;
+
 function lexAttribute(selector, start) {
 	var last = start + 1,
 		selectorLength = selector.length,
 		lexing = true;
 	while (lexing && last < selector.length) {
-		var character = selector.charAt(start);
+		var character = selector.charAt(last);
+		switch (character) {
+			case '\\':
+				last += 2;
+				break;
+			case '"':
+			case "'":
+				var next = lexQuote(selector, last);
+				if (next == last) {
+					return start;
+				}
+				last = next;
+			case ']':
+				return last + 1;
+			default:
+				last++;
+				break;
+		}
 	}
+	return start;
 }
 
 function lexQuote(selector, start) {
 	var quoteCharacter = selector.charAt(start),
-		lexing = true,
 		last = start + 1,
 		selectorLength = selector.length;
-	while (lexing && last < selectorLength) {
-		switch (selector.charAt(start)) {
+	while (last < selectorLength) {
+		switch (selector.charAt(last)) {
 		case '\\':
 			last += 2;
 			break;
 		case quoteCharacter:
-			lexing = false;
+			return last + 1;
 		default:
 			last++;
 			break;
 		}
 	}
-	return last;
+	return start;
 }
 
 var stoppingNonSelectors = ['#', '.', ':', '!', ',', '['],
@@ -67,6 +86,11 @@ function lex(selector, start) {
 		if (has(['"', "'"], character)) {
 			if (start === last) {
 				last = lexQuote(selector, last);
+			}
+			return last;
+		} else if (character === '[') {
+			if (start === last) {
+				last = lexAttribute(selector, last);
 			}
 			return last;
 		} else if (has(initializers, character)) {
