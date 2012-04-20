@@ -120,7 +120,7 @@ function ancestorCheck(elem, chain) {
 }
 
 function parentCheck(elem, chain) {
-	validateMatch(elem.parentNode, chain) ? [elem.parentNode] : [];
+	return validateMatch(elem.parentNode, chain) ? [elem.parentNode] : [];
 }
 
 function nextEldestCheck(elem, chain) {
@@ -227,7 +227,7 @@ var _pebble = window["pebble"],
 					});
 					break;
 				case ',':
-					results = results.concat(performSelection(compound));
+					results = results.concat(performSelection(context, compound));
 					compound = {filters: []};
 					break;
 				default:
@@ -241,7 +241,7 @@ var _pebble = window["pebble"],
 		// "Consume" the token.
 		first = last;
 	}
-	console.log(performSelection(context, compound));
+	return results.concat(performSelection(context, compound));
 };
 
 pebble["noConflict"] = function() {
