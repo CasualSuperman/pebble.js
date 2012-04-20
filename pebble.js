@@ -139,17 +139,59 @@ var _pebble = window["pebble"],
 	var len = selector.length,
 		first = 0;
 
+	var compound = {};
+
 	while (first < len) {
+		// Get the next token.
 		var last = lex(selector, first),
-			token = selector.slice(first, last);
-		if (token.length > 0) {
-			console.log('"' + token + '"');
-		} else {
-			console.log("Breaking out because of an empty match.");
-			last = len;
+			token = selector.slice(first, last),
+			oldCompound = compound;
+
+		// Make sure we're not caught in an infiite loop of zero-length tokens.
+		if (first === last) {
+			break;
 		}
+
+		selector = selector.trim(); // Remove extra whitespace.
+		var relatonship  = null;
+
+		if (selector === '') {
+			relationship = ancestorCheck;
+		} else if (selector === '>') {
+		 	relationship = parentCheck;
+		} else if (selector === '+') {
+		 	relationship = nextEldestCheck;
+		} else if (selector === '~') {
+			relationship = elderSiblingCheck;
+		}  else {
+			switch (selector.charAt(0)) {
+				case '.':
+					var classTest = new RegExp("(^| )" + selector.slice(1).replace(/\\(.)/, "$1") + "( |$)");
+					return function(node) {
+						return classTest.test(node.className);
+					};
+				case '#':
+					var parsedId = selector.slice(1).replace(/\\(.)/, "$1");
+					return function(node) {
+						return node.id === parsedId;
+					};
+				case '!':
+					compound.focus = true;
+					break;
+				case '[':
+					break;
+				default:
+					compound.tagName = selector.replace(/\\/(.)/, "$1").toUpperCase();
+			}
+		}
+		if (relationship) {
+			compound = {next: oldCompound, relationship: relationship};
+		}
+
+		// "Consume" the token.
 		first = last;
 	}
+	console.log(compound);
 };
 
 pebble["noConflict"] = function() {
