@@ -244,7 +244,7 @@ var _pebble = window["pebble"],
 		// "Consume" the token.
 		first = last;
 	}
-	console.log(performSelection(context, compound));
+	return results.concat(performSelection(context, compound));
 };
 
 pebble["noConflict"] = function() {
