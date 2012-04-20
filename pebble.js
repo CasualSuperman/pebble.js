@@ -18,33 +18,6 @@ var indexOf = (function() {
 	};
 }());
 
-function lexAttribute(selector, start) {
-	var last = start + 1,
-		selectorLength = selector.length,
-		lexing = true;
-	while (lexing && last < selector.length) {
-		var character = selector.charAt(last);
-		switch (character) {
-			case '\\':
-				last += 2;
-				break;
-			case '"':
-			case "'":
-				var next = lexQuote(selector, last);
-				if (next == last) {
-					return start;
-				}
-				last = next;
-			case ']':
-				return last + 1;
-			default:
-				last++;
-				break;
-		}
-	}
-	return start;
-}
-
 function lexQuote(selector, start) {
 	var quoteCharacter = selector.charAt(start),
 		last = start + 1,
@@ -83,15 +56,8 @@ function lex(selector, start) {
 				last = lexQuote(selector, last);
 			}
 			return last;
-		case '[':
-			if (start === last) {
-				last = lexAttribute(selector, last);
-			}
-			return last;
 		case '#':
 		case '.':
-		case ':':
-		case '!':
 		case ',':
 			if (start === last) {
 				last++;
@@ -259,11 +225,6 @@ var _pebble = window["pebble"],
 					compound.filters.splice(0, 0, function(node) {
 						return node.id === parsedId;
 					});
-					break;
-				case '!':
-					compound.focus = true;
-					break;
-				case '[':
 					break;
 				case ',':
 					results = results.concat(performSelection(compound));
