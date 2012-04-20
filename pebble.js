@@ -126,6 +126,87 @@ function lex(selector, start) {
 	return last;
 }
 
+function validateMatch(node, chain) {
+	if (chain.tagName) {
+		if (chain.tagName !== node.tagName) {
+			return false;
+		}
+	}
+	if (chain.filters) {
+		for (var i = 0, len = chain.filters.length; i < len; ++i) {
+			if (!chain.filters[i](node)) {
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+function ancestorCheck(elem, chain) {
+	var results = [];
+	while (elem.parentNode) {
+		if (validateMatch(elem.parentNode, chain)) {
+			results.push(elem.parentNode);
+		}
+		elem = elem.parentNode;
+	}
+	return results;
+}
+
+function parentCheck(elem, chain) {
+	validateMatch(elem.parentNode, chain) ? [elem.parentNode] : [];
+}
+
+function nextEldestCheck(elem, chain) {
+	var previousSibling = elem.previousSibling;
+	while (previousSibling.nodeType !== 1 && previousSibling.previousSibling) {
+		previousSibling = previousSibling.previousSibling;
+	}
+	if (previousSibling) {
+		return validateMatch(previousSibling, chain);
+	}
+	return false;
+}
+
+function elderSiblingCheck(elem, chain) {
+	var results = [];
+	while (elem.previousSibling) {
+		if (elem.previousSibling.nodeType === 1 && validateMatch(elem.previousSibling, chain)) {
+			results.push(elem.previousSibling);
+		}
+		elem = elem.previousSibling;
+	}
+	return results;
+}
+
+function performSelection(context, chain) {
+	var tempResults = [];
+	var results = [];
+	if (chain.tagName) {
+		results = context.getElementsByTagName(chain.tagName);
+	} else {
+		results = context.getElementsByTagName("*");
+	}
+	if (chain.filters) {
+		results = Array.prototype.slice.apply(results);
+		for (var i = 0, len = chain.filters.length; i < len; ++i) {
+			results = results.filter(chain.filters[i]);
+		}
+	}
+	while (chain.next) {
+		results = Array.prototype.slice.apply(results);
+		results = results.map(function(elem) {
+			if (chain.relationship(elem, chain.next).length > 0) {
+				return elem;
+			}
+		}).filter(function(elem){
+			return elem !== undefined;
+		});
+		chain = chain.next;
+	}
+	return results;
+}
+
 var _pebble = window["pebble"],
 	pebble = function(selector, context) {
 	if (selector === undefined || selector === "") {
@@ -139,7 +220,8 @@ var _pebble = window["pebble"],
 	var len = selector.length,
 		first = 0;
 
-	var compound = {};
+	var compound = {filters: []};
+	var results = [];
 
 	while (first < len) {
 		// Get the next token.
@@ -152,46 +234,53 @@ var _pebble = window["pebble"],
 			break;
 		}
 
-		selector = selector.trim(); // Remove extra whitespace.
-		var relatonship  = null;
+		token = token.trim(); // Remove extra whitespace.
+		var relationship  = null;
 
-		if (selector === '') {
+		if (token === '') {
 			relationship = ancestorCheck;
-		} else if (selector === '>') {
+		} else if (token === '>') {
 		 	relationship = parentCheck;
-		} else if (selector === '+') {
+		} else if (token === '+') {
 		 	relationship = nextEldestCheck;
-		} else if (selector === '~') {
+		} else if (token === '~') {
 			relationship = elderSiblingCheck;
 		}  else {
-			switch (selector.charAt(0)) {
+			switch (token.charAt(0)) {
 				case '.':
-					var classTest = new RegExp("(^| )" + selector.slice(1).replace(/\\(.)/, "$1") + "( |$)");
-					return function(node) {
+					var classTest = new RegExp("(^| )" + token.slice(1).replace(/\\(.)/, "$1") + "( |$)");
+					compound.filters.push(function(node) {
 						return classTest.test(node.className);
-					};
+					});
+					break;
 				case '#':
-					var parsedId = selector.slice(1).replace(/\\(.)/, "$1");
-					return function(node) {
+					var parsedId = token.slice(1).replace(/\\(.)/, "$1");
+
+					compound.filters.splice(0, 0, function(node) {
 						return node.id === parsedId;
-					};
+					});
+					break;
 				case '!':
 					compound.focus = true;
 					break;
 				case '[':
 					break;
+				case ',':
+					results = results.concat(performSelection(compound));
+					compound = {filters: []};
+					break;
 				default:
-					compound.tagName = selector.replace(/\\/(.)/, "$1").toUpperCase();
+					compound.tagName = token.replace(/\\(.)/, "$1").toUpperCase();
 			}
 		}
 		if (relationship) {
-			compound = {next: oldCompound, relationship: relationship};
+			compound = {next: oldCompound, relationship: relationship, filters:[]};
 		}
 
 		// "Consume" the token.
 		first = last;
 	}
-	console.log(compound);
+	console.log(performSelection(context, compound));
 };
 
 pebble["noConflict"] = function() {
