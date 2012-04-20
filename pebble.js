@@ -1,8 +1,15 @@
-// Anonymous Function
+/**
+ * pebble.js - A lightweight CSS1 selector engine.
+ * Robert Wertman
+ */
+
 (function() {
 "use strict";
 
+// Anonymous functions.
+// This provides a version of indexOf on browsers that don't support it.
 var indexOf = (function() {
+	// IE < 9 doesn't have indexOf.
 	if (Array.prototype.indexOf) {
 		return function(arr, item) {
 			return arr.indexOf(item);
@@ -18,7 +25,10 @@ var indexOf = (function() {
 	};
 }());
 
-function lexQuote(selector, start) {
+// Use of arguments variable. This will lex a quoted string.
+function lexQuote() {
+	var selector = arguments[0];
+	var start = arguments[1];
 	var quoteCharacter = selector.charAt(start),
 		last = start + 1,
 		selectorLength = selector.length;
@@ -76,6 +86,7 @@ function lex(selector, start) {
 				lexing = false;
 				last++;
 				var next = lex(selector, last);
+				// Non-trivial regular expression.
 				if (/^\s*[+~ >]\s*$/.test(selector.slice(last, next))) {
 					last = next;
 				}
@@ -92,6 +103,7 @@ function lex(selector, start) {
 	return last;
 }
 
+// This takes a node and a filter and returns if it passes the filter or not.
 function validateMatch(node, chain) {
 	if (chain.tagName) {
 		if (chain.tagName !== node.tagName) {
@@ -108,6 +120,7 @@ function validateMatch(node, chain) {
 	return true;
 }
 
+// This takes an element and a filter and sees which of its ancestors pass the filter.
 function ancestorCheck(elem, chain) {
 	var results = [];
 	while (elem.parentNode) {
@@ -119,10 +132,12 @@ function ancestorCheck(elem, chain) {
 	return results;
 }
 
+// This takes an element and a filter and sees if its parent passes the filter.
 function parentCheck(elem, chain) {
 	return validateMatch(elem.parentNode, chain) ? [elem.parentNode] : [];
 }
 
+// This takes an element and a filter and sees if its next eldest sibling passes the filter.
 function nextEldestCheck(elem, chain) {
 	var previousSibling = elem.previousSibling;
 	while (previousSibling.nodeType !== 1 && previousSibling.previousSibling) {
@@ -134,13 +149,12 @@ function nextEldestCheck(elem, chain) {
 	return false;
 }
 
+// This takes a filter and an element and finds which elder siblings pass the filter.
 function elderSiblingCheck(elem, chain) {
 	var results = [];
-	while (elem) {
-		while (elem.previousSibline && elem.previousSibling.nodeType !== 1) {
-			elem = elem.previousSibling;
-		}
-		if (elem.previousSibling && validateMatch(elem.previousSibling, chain)) {
+	while (elem.previousSibling) {
+		if (elem.previousSibling.nodeType === 1 &&
+			 validateMatch(elem.previousSibling, chain)) {
 			results.push(elem.previousSibling);
 		}
 		elem = elem.previousSibling;
@@ -148,6 +162,7 @@ function elderSiblingCheck(elem, chain) {
 	return results;
 }
 
+// This takes a chain of selectors and filters the results.
 function performSelection(context, chain) {
 	var tempResults = [];
 	var results = [];
@@ -156,12 +171,14 @@ function performSelection(context, chain) {
 	} else {
 		results = context.getElementsByTagName("*");
 	}
+	// forEach
 	if (chain.filters) {
 		results = Array.prototype.slice.apply(results);
-		for (var i = 0, len = chain.filters.length; i < len; ++i) {
-			results = results.filter(chain.filters[i]);
-		}
+		chain.filters.forEach(function(filter) {
+			results = results.filter(filter);
+		});
 	}
+	// Map.
 	while (chain.next) {
 		results = Array.prototype.slice.apply(results);
 		results = results.map(function(elem) {
@@ -177,6 +194,7 @@ function performSelection(context, chain) {
 }
 
 var _pebble = window["pebble"],
+	// This takes a selector and an optional context, and does a search over it.
 	pebble = function(selector, context) {
 	if (selector === undefined || selector === "") {
 		return [];
@@ -199,8 +217,9 @@ var _pebble = window["pebble"],
 			oldCompound = compound;
 
 		// Make sure we're not caught in an infiite loop of zero-length tokens.
+		// Throw statement.
 		if (first === last) {
-			break;
+			throw "Invalid selector.";
 		}
 
 		token = token.trim(); // Remove extra whitespace.
@@ -230,7 +249,8 @@ var _pebble = window["pebble"],
 					});
 					break;
 				case ',':
-					results = results.concat(performSelection(context, compound));
+				// reduce
+					results = results.reduce(Array.prototype.concat,performSelection(context, compound));
 					compound = {filters: []};
 					break;
 				default:
@@ -247,12 +267,29 @@ var _pebble = window["pebble"],
 	return results.concat(performSelection(context, compound));
 };
 
+// This allows users to reclaim window.pebble if it's already used by something.
 pebble["noConflict"] = function() {
 	window["pebble"] = _pebble;
 	return pebble;
 };
 
-window["pebble"] = pebble;
+// Try-catch, apply, and a set impemeneted with an object.
+window["pebble"] = function() {
+	try {
+		var nodes = pebble.apply(null, arguments);
+		var unique = {};
+		var results = [];
+		nodes.forEach(function(node) {
+			unique[node] = true;
+		});
+		for (var node in unique) {
+				results.push(node);
+		}
+		return results;
+	} catch (e) {
+		return [];
+	}
+};
 
 }());
-// vim:noexpandtab: set ts=4 sw=4:
+// vim:noexpandtab: set ts=3 sw=3:
