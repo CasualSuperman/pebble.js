@@ -1,4 +1,3 @@
-// Anonymous Function
 (function() {
 "use strict";
 
